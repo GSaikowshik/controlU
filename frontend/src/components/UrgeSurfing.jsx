@@ -26,7 +26,8 @@ export default function UrgeSurfing({ categoryId, onClose }) {
           return;
         }
 
-        const response = await fetch('/api/interventions/log', {
+        const baseUrl = import.meta.env.VITE_API_URL || '';
+        const response = await fetch(`${baseUrl}/api/interventions/log`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -35,9 +36,18 @@ export default function UrgeSurfing({ categoryId, onClose }) {
           body: JSON.stringify({ category_id: categoryId })
         });
 
+        const contentType = response.headers.get('content-type');
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.detail || 'Could not start Urge Surfing session.');
+          if (contentType && contentType.includes('application/json')) {
+            const errData = await response.json();
+            throw new Error(errData.detail || 'Could not start Urge Surfing session.');
+          } else {
+            throw new Error('Server connection failed');
+          }
+        }
+
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server connection failed');
         }
 
         const data = await response.json();
@@ -81,7 +91,8 @@ export default function UrgeSurfing({ categoryId, onClose }) {
     }
 
     try {
-      await fetch(`/api/interventions/log/${logIdToUse}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/interventions/log/${logIdToUse}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -92,6 +103,16 @@ export default function UrgeSurfing({ categoryId, onClose }) {
           completed_full_session: true
         })
       });
+
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to log successful exercise completion');
+        } else {
+          throw new Error('Server connection failed');
+        }
+      }
     } catch (err) {
       console.error('Failed to log successful exercise completion', err);
     } finally {
@@ -112,7 +133,8 @@ export default function UrgeSurfing({ categoryId, onClose }) {
     }
 
     try {
-      await fetch(`/api/interventions/log/${logIdToUse}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/interventions/log/${logIdToUse}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -123,6 +145,16 @@ export default function UrgeSurfing({ categoryId, onClose }) {
           completed_full_session: false
         })
       });
+
+      const contentType = response.headers.get('content-type');
+      if (!response.ok) {
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to log aborted exercise session');
+        } else {
+          throw new Error('Server connection failed');
+        }
+      }
     } catch (err) {
       console.error('Failed to log aborted exercise session', err);
     } finally {

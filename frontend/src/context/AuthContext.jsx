@@ -11,12 +11,14 @@ export function AuthProvider({ children }) {
   // Function to fetch current user profile
   const fetchProfile = async (accessToken) => {
     try {
-      const response = await fetch('/api/auth/me', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/auth/me`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`
         }
       });
-      if (response.ok) {
+
+      const contentType = response.headers.get('content-type');
+      if (response.ok && contentType && contentType.includes('application/json')) {
         const userData = await response.json();
         setUser(userData);
         setToken(accessToken);
@@ -37,14 +39,20 @@ export function AuthProvider({ children }) {
     if (!session || !session.user) return null;
     const { email, id: supabaseUid } = session.user;
     const oauthPassword = `SupabaseOAuth_${supabaseUid}`;
+    const baseUrl = import.meta.env.VITE_API_URL || '';
 
     try {
       // 1. Attempt login to custom backend
-      let response = await fetch('/api/auth/login', {
+      let response = await fetch(`${baseUrl}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: oauthPassword }),
       });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server connection failed');
+      }
 
       let data = await response.json();
       if (response.ok) {
@@ -53,7 +61,7 @@ export function AuthProvider({ children }) {
       }
 
       // 2. If login fails, register the user first
-      const registerResponse = await fetch('/api/auth/register', {
+      const registerResponse = await fetch(`${baseUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,13 +71,24 @@ export function AuthProvider({ children }) {
         }),
       });
 
+      const registerContentType = registerResponse.headers.get('content-type');
+      if (!registerContentType || !registerContentType.includes('application/json')) {
+        throw new Error('Server connection failed');
+      }
+
       const registerData = await registerResponse.json();
       if (registerResponse.ok) {
-        const reloginResponse = await fetch('/api/auth/login', {
+        const reloginResponse = await fetch(`${baseUrl}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password: oauthPassword }),
         });
+
+        const reloginContentType = reloginResponse.headers.get('content-type');
+        if (!reloginContentType || !reloginContentType.includes('application/json')) {
+          throw new Error('Server connection failed');
+        }
+
         const reloginData = await reloginResponse.json();
         if (reloginResponse.ok) {
           await login(reloginData.access_token);

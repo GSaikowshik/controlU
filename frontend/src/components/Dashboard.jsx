@@ -64,19 +64,45 @@ export default function Dashboard() {
         return;
       }
 
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+
       // 1. Fetch Stats
-      const statsRes = await fetch('/api/dashboard/stats', {
+      const statsRes = await fetch(`${baseUrl}/api/dashboard/stats`, {
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
-      if (!statsRes.ok) throw new Error('Failed to load dashboard metrics.');
+      
+      const statsContentType = statsRes.headers.get('content-type');
+      if (!statsRes.ok) {
+        if (statsContentType && statsContentType.includes('application/json')) {
+          const statsErr = await statsRes.json();
+          throw new Error(statsErr.detail || 'Failed to load dashboard metrics.');
+        } else {
+          throw new Error('Server connection failed');
+        }
+      }
+      if (!statsContentType || !statsContentType.includes('application/json')) {
+        throw new Error('Server connection failed');
+      }
       const statsData = await statsRes.json();
       setStats(statsData);
 
       // 2. Fetch Categories
-      const catRes = await fetch('/api/dashboard/categories', {
+      const catRes = await fetch(`${baseUrl}/api/dashboard/categories`, {
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
-      if (!catRes.ok) throw new Error('Failed to load urge lists.');
+      
+      const catContentType = catRes.headers.get('content-type');
+      if (!catRes.ok) {
+        if (catContentType && catContentType.includes('application/json')) {
+          const catErr = await catRes.json();
+          throw new Error(catErr.detail || 'Failed to load urge lists.');
+        } else {
+          throw new Error('Server connection failed');
+        }
+      }
+      if (!catContentType || !catContentType.includes('application/json')) {
+        throw new Error('Server connection failed');
+      }
       const catData = await catRes.json();
       setCategories(catData);
       
@@ -85,12 +111,16 @@ export default function Dashboard() {
       }
 
       // 3. Fetch Calendar Summary
-      const calRes = await fetch(`/api/calendar/summary?month=${currentMonthStr}`, {
+      const calRes = await fetch(`${baseUrl}/api/calendar/summary?month=${currentMonthStr}`, {
         headers: { 'Authorization': `Bearer ${activeToken}` }
       });
-      if (calRes.ok) {
+      
+      const calContentType = calRes.headers.get('content-type');
+      if (calRes.ok && calContentType && calContentType.includes('application/json')) {
         const calData = await calRes.json();
         setCalendarData(calData);
+      } else if (!calRes.ok) {
+        console.warn('Failed to load calendar summary.');
       }
     } catch (err) {
       setError(err.message);
@@ -127,7 +157,8 @@ export default function Dashboard() {
 
     try {
       const activeToken = token || localStorage.getItem('token');
-      const response = await fetch('/api/interventions/log', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/interventions/log`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,9 +167,18 @@ export default function Dashboard() {
         body: JSON.stringify({ category_id: selectedCategory })
       });
 
+      const contentType = response.headers.get('content-type');
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to activate the isolation chamber.');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to activate the isolation chamber.');
+        } else {
+          throw new Error('Server connection failed');
+        }
+      }
+
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server connection failed');
       }
 
       const logData = await response.json();
@@ -169,7 +209,8 @@ export default function Dashboard() {
     
     try {
       const activeToken = token || localStorage.getItem('token');
-      const response = await fetch(`/api/interventions/log/${activeLogId}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/interventions/log/${activeLogId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -181,10 +222,18 @@ export default function Dashboard() {
         })
       });
       
+      const contentType = response.headers.get('content-type');
       if (response.ok) {
         setSessionCompleted('aborted');
         await refreshUser(); // Update Aura globally in header/profile
         await fetchDashboardData(); // Update statistics & calendar
+      } else {
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to log aborted intervention');
+        } else {
+          throw new Error('Server connection failed');
+        }
       }
     } catch (err) {
       console.error('Failed to log aborted intervention', err);
@@ -200,7 +249,8 @@ export default function Dashboard() {
     
     try {
       const activeToken = token || localStorage.getItem('token');
-      const response = await fetch(`/api/interventions/log/${activeLogId}`, {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${baseUrl}/api/interventions/log/${activeLogId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -212,10 +262,18 @@ export default function Dashboard() {
         })
       });
       
+      const contentType = response.headers.get('content-type');
       if (response.ok) {
         setSessionCompleted('success');
         await refreshUser(); // Update Aura globally in header/profile
         await fetchDashboardData(); // Update statistics & calendar
+      } else {
+        if (contentType && contentType.includes('application/json')) {
+          const errData = await response.json();
+          throw new Error(errData.detail || 'Failed to log completed intervention');
+        } else {
+          throw new Error('Server connection failed');
+        }
       }
     } catch (err) {
       console.error('Failed to log completed intervention', err);
@@ -228,7 +286,8 @@ export default function Dashboard() {
 
     try {
       const activeToken = token || localStorage.getItem('token');
-      const res = await fetch('/api/dashboard/categories', {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+      const res = await fetch(`${baseUrl}/api/dashboard/categories`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -237,11 +296,21 @@ export default function Dashboard() {
         body: JSON.stringify({ name: newCategoryName })
       });
       
-      const data = await res.json();
+      const contentType = res.headers.get('content-type');
       if (!res.ok) {
-        throw new Error(data.detail || 'Could not add urge category.');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          throw new Error(data.detail || 'Could not add urge category.');
+        } else {
+          throw new Error('Server connection failed');
+        }
       }
 
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server connection failed');
+      }
+
+      const data = await res.json();
       setNewCategoryName('');
       await fetchDashboardData();
       setSelectedCategory(data.id);

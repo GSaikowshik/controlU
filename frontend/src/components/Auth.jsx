@@ -35,13 +35,20 @@ export default function Auth({ onAuthSuccess }) {
     setLoading(true);
 
     try {
+      const baseUrl = import.meta.env.VITE_API_URL || '';
+
       if (isLogin) {
         // Login flow
-        const response = await fetch('/api/auth/login', {
+        const response = await fetch(`${baseUrl}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server connection failed');
+        }
 
         const data = await response.json();
         if (!response.ok) {
@@ -57,7 +64,7 @@ export default function Auth({ onAuthSuccess }) {
           throw new Error('Please enter a valid birth year between 1900 and 2026.');
         }
 
-        const response = await fetch('/api/auth/register', {
+        const response = await fetch(`${baseUrl}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -67,18 +74,28 @@ export default function Auth({ onAuthSuccess }) {
           }),
         });
 
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Server connection failed');
+        }
+
         const data = await response.json();
         if (!response.ok) {
           throw new Error(data.detail || 'Failed to register account.');
         }
 
         // After successful registration, log them in automatically
-        const loginResponse = await fetch('/api/auth/login', {
+        const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password }),
         });
         
+        const loginContentType = loginResponse.headers.get('content-type');
+        if (!loginContentType || !loginContentType.includes('application/json')) {
+          throw new Error('Server connection failed');
+        }
+
         const loginData = await loginResponse.json();
         if (!loginResponse.ok) {
           throw new Error('Registration succeeded, but auto-login failed. Please log in manually.');
