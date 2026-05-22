@@ -20,7 +20,8 @@ app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    redirect_slashes=False
 )
 
 # CORS Middleware setup - crucial for smooth React frontend integration
