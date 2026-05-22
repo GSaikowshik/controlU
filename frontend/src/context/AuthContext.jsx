@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+import { supabase } from '../supabaseClient';
 
 const AuthContext = createContext(null);
 
@@ -32,17 +33,98 @@ export function AuthProvider({ children }) {
     return null;
   };
 
-  // Check token on initial render
+  const handleSupabaseSession = async (session) => {
+    if (!session || !session.user) return null;
+    const { email, id: supabaseUid } = session.user;
+    const oauthPassword = `SupabaseOAuth_${supabaseUid}`;
+
+    try {
+      // 1. Attempt login to custom backend
+      let response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password: oauthPassword }),
+      });
+
+      let data = await response.json();
+      if (response.ok) {
+        await login(data.access_token);
+        return true;
+      }
+
+      // 2. If login fails, register the user first
+      const registerResponse = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password: oauthPassword,
+          birth_year: 2000 // Default birth year for Gen Z
+        }),
+      });
+
+      const registerData = await registerResponse.json();
+      if (registerResponse.ok) {
+        const reloginResponse = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: oauthPassword }),
+        });
+        const reloginData = await reloginResponse.json();
+        if (reloginResponse.ok) {
+          await login(reloginData.access_token);
+          return true;
+        }
+      } else {
+        console.error("Failed to register Supabase synced account in backend:", registerData.detail);
+      }
+    } catch (err) {
+      console.error("Error exchanging Supabase session for local JWT:", err);
+    }
+    return false;
+  };
+
+  // Check token and Supabase session on initial render
   useEffect(() => {
     const initializeAuth = async () => {
+      setLoading(true);
       const savedToken = localStorage.getItem('token');
       if (savedToken) {
         await fetchProfile(savedToken);
+      } else {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            await handleSupabaseSession(session);
+          }
+        } catch (err) {
+          console.error("Failed to retrieve Supabase session:", err);
+        }
       }
       setLoading(false);
     };
 
     initializeAuth();
+  }, []);
+
+  // Listen to Supabase auth state changes for real-time synchronization
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        const savedToken = localStorage.getItem('token');
+        if (!savedToken) {
+          setLoading(true);
+          await handleSupabaseSession(session);
+          setLoading(false);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        logout();
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
   const login = async (newToken) => {
@@ -53,10 +135,15 @@ export function AuthProvider({ children }) {
     return !!profile;
   };
 
-  const logout = () => {
+  const logout = async () => {
     localStorage.removeItem('token');
     setUser(null);
     setToken(null);
+    try {
+      await supabase.auth.signOut();
+    } catch (err) {
+      console.error("Failed to sign out of Supabase:", err);
+    }
   };
 
   const refreshUser = async () => {

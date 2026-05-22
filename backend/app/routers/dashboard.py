@@ -19,11 +19,6 @@ router = APIRouter(
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=100, description="Name of the urge category (e.g. Social Media)")
 
-class InterventionCreate(BaseModel):
-    category_id: UUID = Field(..., description="ID of the urge category being managed")
-    duration_seconds: int = Field(..., ge=0, description="Duration of the intervention in seconds")
-    completed_full_session: bool = Field(..., description="Whether the user successfully completed the entire session")
-
 # Response schemas
 class CategoryResponse(BaseModel):
     id: UUID
@@ -32,15 +27,6 @@ class CategoryResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class InterventionResponse(BaseModel):
-    id: UUID
-    user_id: UUID
-    category_id: UUID
-    started_at: datetime
-    completed_full_session: bool
-    duration_seconds: int
-    class Config:
-        from_attributes = True
 
 def get_generation_roast_and_advice(tier: str) -> dict:
     """
@@ -146,45 +132,3 @@ async def create_category(category_in: CategoryCreate, user: User = Depends(get_
     await db.refresh(new_cat)
     return new_cat
 
-@router.post("/interventions", response_model=InterventionResponse, status_code=status.HTTP_201_CREATED)
-async def create_intervention(log_in: InterventionCreate, user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    """
-    Logs an urge intervention session. Completing a full session grants Aura points!
-    """
-    # Verify category belongs to user
-    stmt = select(UrgeCategory).where(
-        (UrgeCategory.id == log_in.category_id) & 
-        (UrgeCategory.user_id == user.id)
-    )
-    result = await db.execute(stmt)
-    category = result.scalar_one_or_none()
-    if not category:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Urge category not found or unauthorized access."
-        )
-
-    # Calculate Aura Points to reward
-    aura_reward = 0
-    if log_in.completed_full_session:
-        # Base reward + multiplier for duration (e.g. +1 point per 30 seconds)
-        aura_reward = 20 + int(log_in.duration_seconds / 30)
-        # Cap reward to prevent hacking
-        aura_reward = min(aura_reward, 100)
-        user.aura_points += aura_reward
-    else:
-        # Penalize slightly for failing to lock in
-        user.aura_points = max(0, user.aura_points - 10)
-
-    new_log = InterventionLog(
-        user_id=user.id,
-        category_id=log_in.category_id,
-        completed_full_session=log_in.completed_full_session,
-        duration_seconds=log_in.duration_seconds
-    )
-    
-    db.add(new_log)
-    # We also updated user aura points, so SQLAlchemy will save both
-    await db.commit()
-    await db.refresh(new_log)
-    return new_log

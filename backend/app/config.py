@@ -1,11 +1,14 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, model_validator
 
 class Settings(BaseSettings):
     # App Config
     APP_NAME: str = "controlU API"
     DEBUG: bool = True
+    
+    # CORS Config
+    CORS_ORIGINS: str = ""
     
     # Database Config
     # Default to sqlite locally if no DATABASE_URL is provided, or a generic local postgres
@@ -29,6 +32,19 @@ class Settings(BaseSettings):
         extra="ignore"
     )
 
+    @model_validator(mode="after")
+    def validate_production_keys(self) -> 'Settings':
+        if not self.DEBUG:
+            if self.JWT_SECRET_KEY == "SUPER_SECRET_AURA_KEY_DO_NOT_USE_IN_PRODUCTION_1234567890":
+                raise RuntimeError(
+                    "Security Enforcement: JWT_SECRET_KEY cannot use the default fallback value in production mode (DEBUG=False)."
+                )
+            if self.DATABASE_URL == "sqlite+aiosqlite:///./controlu.db":
+                raise RuntimeError(
+                    "Security Enforcement: DATABASE_URL cannot use the default fallback value in production mode (DEBUG=False)."
+                )
+        return self
+
     @property
     def async_database_url(self) -> str:
         """
@@ -50,3 +66,4 @@ class Settings(BaseSettings):
         return url
 
 settings = Settings()
+
