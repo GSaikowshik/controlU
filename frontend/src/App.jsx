@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Analytics } from '@vercel/analytics/react';
 import { useAuth } from './context/AuthContext';
 import LandingPage from './components/LandingPage';
 import Auth from './components/Auth';
@@ -10,20 +11,38 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#030712] text-slate-100 font-sans">
-        <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="font-display text-sm tracking-wide text-slate-400">Verifying your aura credentials...</p>
-      </div>
+      <>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#030712] text-slate-100 font-sans">
+          <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="font-display text-sm tracking-wide text-slate-400">Verifying your aura credentials...</p>
+        </div>
+        <Analytics />
+      </>
     );
   }
 
   if (!isAuthenticated) {
     if (!showAuth) {
-      return <LandingPage onGetStarted={() => setShowAuth(true)} />;
+      return (
+        <>
+          <LandingPage onGetStarted={() => setShowAuth(true)} />
+          <Analytics />
+        </>
+      );
     }
-    return <Auth onAuthSuccess={() => setShowAuth(false)} />;
+    return (
+      <>
+        <Auth onAuthSuccess={() => setShowAuth(false)} />
+        <Analytics />
+      </>
+    );
   }
 
-  return <Dashboard />;
+  return (
+    <>
+      <Dashboard />
+      <Analytics />
+    </>
+  );
 }
 
