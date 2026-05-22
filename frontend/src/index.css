@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  --font-code: 'Space Grotesk', monospace;
+
+  /* Dynamically map Tailwind brand variables to CSS custom variables */
+  --color-brand-bg: var(--brand-bg);
+  --color-brand-card: var(--brand-card);
+  --color-brand-card-border: var(--brand-card-border);
+  --color-brand-primary: var(--brand-primary);
+  --color-brand-primary-hover: var(--brand-primary-hover);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-hover: var(--brand-accent-hover);
+  --color-brand-text: var(--brand-text);
+  --color-brand-text-muted: var(--brand-text-muted);
+  --color-brand-glow: var(--brand-glow);
+}
+
+:root {
+  /* Gen Z / Default Theme */
+  --brand-bg: #09090b;
+  --brand-card: rgba(15, 23, 42, 0.7);
+  --brand-card-border: rgba(139, 92, 246, 0.2);
+  --brand-primary: #8b5cf6;
+  --brand-primary-hover: #7c3aed;
+  --brand-accent: #14b8a6;
+  --brand-accent-hover: #0d9488;
+  --brand-text: #f4f4f5;
+  --brand-text-muted: #a1a1aa;
+  --brand-glow: rgba(139, 92, 246, 0.15);
+  font-family: 'Space Grotesk', monospace;
+}
+
+/* Millennial: Sage Greens & Soft Off-whites */
+.theme-millennial {
+  --brand-bg: #f5f7f5;
+  --brand-card: rgba(255, 255, 255, 0.85);
+  --brand-card-border: rgba(92, 122, 110, 0.25);
+  --brand-primary: #5c7a6e;
+  --brand-primary-hover: #486056;
+  --brand-accent: #a3b899;
+  --brand-accent-hover: #8fa584;
+  --brand-text: #2f3e37;
+  --brand-text-muted: #62726a;
+  --brand-glow: rgba(92, 122, 110, 0.1);
+  font-family: 'Inter', sans-serif;
+}
+
+/* Gen Z (Academic Cyberpunk): Deep Blacks, neon purple/teal */
+.theme-gen_z {
+  --brand-bg: #09090b;
+  --brand-card: rgba(15, 23, 42, 0.7);
+  --brand-card-border: rgba(139, 92, 246, 0.2);
+  --brand-primary: #8b5cf6;
+  --brand-primary-hover: #7c3aed;
+  --brand-accent: #14b8a6;
+  --brand-accent-hover: #0d9488;
+  --brand-text: #f4f4f5;
+  --brand-text-muted: #a1a1aa;
+  --brand-glow: rgba(139, 92, 246, 0.15);
+  font-family: 'Space Grotesk', monospace;
+}
+
+/* Gen Alpha: High-contrast brights, oversized UI */
+.theme-gen_alpha {
+  --brand-bg: #0b0f19;
+  --brand-card: rgba(30, 41, 59, 0.95);
+  --brand-card-border: #f43f5e;
+  --brand-primary: #f43f5e;
+  --brand-primary-hover: #e11d48;
+  --brand-accent: #eab308;
+  --brand-accent-hover: #ca8a04;
+  --brand-text: #ffffff;
+  --brand-text-muted: #cbd5e1;
+  --brand-glow: rgba(244, 63, 94, 0.35);
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Gen Alpha visual scaling overrides */
+.theme-gen_alpha .interactive-btn {
+  padding-top: 1.15rem !important;
+  padding-bottom: 1.15rem !important;
+  font-size: 1.15rem !important;
+  border-radius: 1.5rem !important;
+}
+
+.theme-gen_alpha .card {
+  padding: 2.25rem !important;
+  border-width: 3px !important;
+}
+
+.theme-gen_alpha h1 {
+  font-size: 3.25rem !important;
+}
+
+.theme-gen_alpha h2 {
+  font-size: 2.5rem !important;
+}
+
+.theme-gen_alpha h3 {
+  font-size: 1.65rem !important;
+}
+
+.theme-gen_alpha p,
+.theme-gen_alpha label,
+.theme-gen_alpha select,
+.theme-gen_alpha input,
+.theme-gen_alpha span,
+.theme-gen_alpha option {
+  font-size: 1.1rem !important;
+}
+
+/* Custom Glow Animations and Backdrop Filters */
+.glow-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.glow-card::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, var(--brand-glow) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Premium micro-interactions and transitions */
+.interactive-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -10px var(--brand-glow);
+}
+
+.interactive-btn:active {
+  transform: translateY(0);
+}
+
+/* Scrollbar customizations */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--brand-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--brand-card-border);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-primary);
+}

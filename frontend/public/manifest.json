@@ -1,0 +1,22 @@
+{
+  "short_name": "controlU",
+  "name": "controlU — Lock In Urges, Maximize Aura",
+  "description": "A gamified habit tracker and urge logger tailored for millennials, Gen Z, and Gen Alpha. Build discipline, complete focus sessions, and stack your aura points.",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "icons.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "background_color": "#09090b",
+  "theme_color": "#8b5cf6",
+  "display": "standalone",
+  "orientation": "portrait"
+}

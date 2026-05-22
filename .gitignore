@@ -1,0 +1,41 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+.pnp/
+.pnp.js
+
+# Environments & Private credentials
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# SQLite local databases
+*.db
+*.db-journal
+*.sqlite
+
+# Python/Pipenv/Virtualenv files
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Production builds
+dist/
+build/
+.next/
+out/
+
+# IDE/OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
