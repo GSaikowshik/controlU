@@ -34,27 +34,66 @@ export default function Auth({ onAuthSuccess }) {
     setError('');
     setLoading(true);
 
+    // Dynamic helper to process responses, capture raw details, and raise descriptive errors
+    const processResponse = async (response, endpointName) => {
+      const statusCode = response.status;
+      const contentType = response.headers.get('content-type') || '';
+      console.log(`[AUTH CLIENT] Response received from ${endpointName} - Status: ${statusCode}, Content-Type: ${contentType}`);
+
+      // Read raw response text first so we have the absolute exact body in case of issues
+      const rawBody = await response.text();
+
+      if (!response.ok) {
+        console.error(`[AUTH CLIENT ERROR] ${endpointName} request failed with HTTP ${statusCode}. Raw response body:`, rawBody);
+        
+        let errorMessage = `Server error (${statusCode}).`;
+        if (contentType.includes('application/json')) {
+          try {
+            const parsedJson = JSON.parse(rawBody);
+            errorMessage = parsedJson.detail || errorMessage;
+          } catch (e) {
+            console.error(`[AUTH CLIENT] Failed to parse error JSON payload:`, e);
+          }
+        } else {
+          errorMessage = `Connection failed: Server returned non-JSON payload (${statusCode}). Check server status.`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // If response is OK, parse the JSON payload
+      if (!contentType.includes('application/json')) {
+        console.error(`[AUTH CLIENT ERROR] ${endpointName} succeeded but returned non-JSON content-type: ${contentType}. Raw response body:`, rawBody);
+        throw new Error('Invalid server response: Expected JSON payload.');
+      }
+
+      try {
+        return JSON.parse(rawBody);
+      } catch (parseErr) {
+        console.error(`[AUTH CLIENT ERROR] Failed to parse successful ${endpointName} response JSON:`, parseErr);
+        throw new Error('Failed to parse authentication payload.');
+      }
+    };
+
     try {
       const baseUrl = import.meta.env.VITE_API_URL || '';
 
       if (isLogin) {
-        // Login flow
-        const response = await fetch(`${baseUrl}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server connection failed');
+        console.log(`[AUTH CLIENT] Initiating login flow for '${email}' to ${baseUrl || 'Vite proxy'}/api/auth/login`);
+        let response;
+        try {
+          response = await fetch(`${baseUrl}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+        } catch (networkErr) {
+          console.error('[AUTH CLIENT NETWORK ERROR] Login fetch operation failed completely:', networkErr);
+          throw new Error(`Network failure: Cannot connect to backend server. Confirm FastAPI is running.`);
         }
 
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.detail || 'Failed to authenticate user.');
-        }
-
+        const data = await processResponse(response, 'POST /api/auth/login');
+        console.log('[AUTH CLIENT] Login endpoint validation succeeded. Exchanging token with AuthContext.');
+        
         await login(data.access_token);
         if (onAuthSuccess) onAuthSuccess();
       } else {
@@ -64,47 +103,47 @@ export default function Auth({ onAuthSuccess }) {
           throw new Error('Please enter a valid birth year between 1900 and 2026.');
         }
 
-        const response = await fetch(`${baseUrl}/api/auth/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email, 
-            password, 
-            birth_year: yearInt 
-          }),
-        });
-
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Server connection failed');
+        console.log(`[AUTH CLIENT] Initiating registration flow for '${email}' to ${baseUrl || 'Vite proxy'}/api/auth/register`);
+        let response;
+        try {
+          response = await fetch(`${baseUrl}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+              email, 
+              password, 
+              birth_year: yearInt 
+            }),
+          });
+        } catch (networkErr) {
+          console.error('[AUTH CLIENT NETWORK ERROR] Register fetch operation failed completely:', networkErr);
+          throw new Error(`Network failure: Cannot connect to backend server. Confirm FastAPI is running.`);
         }
 
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.detail || 'Failed to register account.');
-        }
+        await processResponse(response, 'POST /api/auth/register');
+        console.log('[AUTH CLIENT] User registration successful. Triggering auto-login sequence...');
 
         // After successful registration, log them in automatically
-        const loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
-        });
+        let loginResponse;
+        try {
+          loginResponse = await fetch(`${baseUrl}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password }),
+          });
+        } catch (networkErr) {
+          console.error('[AUTH CLIENT NETWORK ERROR] Auto-login fetch operation failed completely:', networkErr);
+          throw new Error('Registration succeeded, but auto-login network connection failed. Please log in manually.');
+        }
         
-        const loginContentType = loginResponse.headers.get('content-type');
-        if (!loginContentType || !loginContentType.includes('application/json')) {
-          throw new Error('Server connection failed');
-        }
-
-        const loginData = await loginResponse.json();
-        if (!loginResponse.ok) {
-          throw new Error('Registration succeeded, but auto-login failed. Please log in manually.');
-        }
+        const loginData = await processResponse(loginResponse, 'POST /api/auth/login (Auto-login)');
+        console.log('[AUTH CLIENT] Auto-login succeeded. Exchanging token with AuthContext.');
 
         await login(loginData.access_token);
         if (onAuthSuccess) onAuthSuccess();
       }
     } catch (err) {
+      console.error('[AUTH CLIENT ERROR SURFACED] Authentication sequence rejected:', err);
       setError(err.message);
     } finally {
       setLoading(false);
